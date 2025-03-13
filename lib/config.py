@@ -40,18 +40,32 @@ class Configer:
 
     def load(self):
         """加载配置文件"""
-        if not exists("./config.json"):
+        try:
+            if not exists("./config.json"):
+                self.save()
+            else:
+                logger.info("读取配置文件...")
+                try:
+                    with open("./config.json", "r", encoding="utf-8") as f:
+                        content = f.read().strip()
+                        if not content:
+                            logger.warning("配置文件为空，将创建新的配置文件")
+                            self.save()
+                            return
+                        
+                        cfg_dict: dict = json.loads(content)
+                        for key, value in cfg_dict.items():
+                            now_value = getattr(self, key) if hasattr(self, key) else None
+                            if isinstance(now_value, Enum):
+                                value = now_value.__class__(value)
+                            self.config_vars[key] = value
+                            setattr(self, key, value)
+                except json.JSONDecodeError:
+                    logger.warning("配置文件格式错误，将创建新的配置文件")
+                    self.save()
+        except Exception as e:
+            logger.error(f"加载配置文件时出错: {e}")
             self.save()
-        else:
-            logger.info("读取配置文件...")
-            with open("./config.json", "r", encoding="utf-8") as f:
-                cfg_dict: dict = json.load(f)
-                for key, value in cfg_dict.items():
-                    now_value = getattr(self, key) if hasattr(self, key) else None
-                    if isinstance(now_value, Enum):
-                        value = now_value.__class__(value)
-                    self.config_vars[key] = value
-                    setattr(self, key, value)
 
     def save(self):
         """保存配置文件"""
