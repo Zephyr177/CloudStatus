@@ -366,3 +366,99 @@ class ToolTip(wx.Frame):
         self.timer.Stop()
         self.timer.Destroy()
         self.Destroy()
+
+class PlayerOnlineWin(wx.Frame):
+    """
+    Display player online information in a window
+    """
+    def __init__(self, parent, player_name, online_data=None):
+        super().__init__(parent, title=f"{player_name} - Online Status", 
+                         style=wx.DEFAULT_FRAME_STYLE, size=(400, 300))
+        
+        self.player_name = player_name
+        self.online_data = online_data or {}
+        
+        # Create main panel and sizer
+        panel = wx.Panel(self)
+        main_sizer = wx.BoxSizer(wx.VERTICAL)
+        
+        # Player header with name and avatar
+        header_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        
+        # Player head image (64x64 pixels)
+        self.head_bitmap = CenteredBitmap(panel, bitmap=wx.NullBitmap, size=(64, 64))
+        header_sizer.Add(self.head_bitmap, 0, wx.ALL, 5)
+        
+        # Player name and status
+        info_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.name_text = wx.StaticText(panel, label=player_name)
+        self.name_text.SetFont(ft(14))
+        info_sizer.Add(self.name_text, 0, wx.ALL, 5)
+        
+        self.status_text = wx.StaticText(panel, label="Status: Unknown")
+        info_sizer.Add(self.status_text, 0, wx.ALL, 5)
+        
+        header_sizer.Add(info_sizer, 1, wx.EXPAND)
+        main_sizer.Add(header_sizer, 0, wx.EXPAND | wx.ALL, 10)
+        
+        # Separator
+        main_sizer.Add(wx.StaticLine(panel), 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
+        
+        # Online history section
+        history_label = wx.StaticText(panel, label="Online History")
+        history_label.SetFont(ft(12))
+        main_sizer.Add(history_label, 0, wx.ALL, 10)
+        
+        # List for online history
+        self.history_list = wx.ListCtrl(panel, style=wx.LC_REPORT)
+        self.history_list.InsertColumn(0, "Date")
+        self.history_list.InsertColumn(1, "Login Time")
+        self.history_list.InsertColumn(2, "Logout Time")
+        self.history_list.InsertColumn(3, "Duration")
+        self.history_list.SetColumnWidth(0, 100)
+        self.history_list.SetColumnWidth(1, 80)
+        self.history_list.SetColumnWidth(2, 80)
+        self.history_list.SetColumnWidth(3, 100)
+        main_sizer.Add(self.history_list, 1, wx.EXPAND | wx.ALL, 10)
+        
+        # Set sizer for panel
+        panel.SetSizer(main_sizer)
+        
+        # Load player head
+        load_player_head(player_name, self.on_head_loaded)
+        
+        # Update display with data if available
+        if online_data:
+            self.update_display()
+            
+        self.Center()
+    
+    def on_head_loaded(self, bitmap):
+        """Callback when player head is loaded"""
+        self.head_bitmap.SetBitmap(bitmap.ConvertToBitmap())
+        self.head_bitmap.Refresh()
+    
+    def update_display(self):
+        """Update the display with current online data"""
+        if not self.online_data:
+            return
+            
+        # Update status text
+        is_online = self.online_data.get('is_online', False)
+        self.status_text.SetLabel(f"Status: {'Online' if is_online else 'Offline'}")
+        self.status_text.SetForegroundColour(wx.Colour(0, 128, 0) if is_online else wx.Colour(128, 0, 0))
+        
+        # Update history list
+        self.history_list.DeleteAllItems()
+        history = self.online_data.get('history', [])
+        
+        for entry in history:
+            login_time = entry.get('login_time', '')
+            logout_time = entry.get('logout_time', '')
+            date = entry.get('date', '')
+            duration = entry.get('duration', '')
+            
+            index = self.history_list.InsertItem(self.history_list.GetItemCount(), date)
+            self.history_list.SetItem(index, 1, login_time)
+            self.history_list.SetItem(index, 2, logout_time)
+            self.history_list.SetItem(index, 3, duration)
