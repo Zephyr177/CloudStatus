@@ -36,6 +36,26 @@ def ft(size: int):
     return font_cache[size]
 
 
+def tuple_fmt_time(seconds: float) -> tuple[int, int, int, int]:
+    """转化时间戳至时间元组"""
+    return int(seconds // 3600 // 24), int(seconds // 3600 % 24), int(seconds % 3600 // 60), int(seconds % 60)
+
+
+def string_fmt_time(seconds: float) -> str:
+    """格式化时间戳至字符串"""
+    time_str = ""
+    time_tuple = tuple_fmt_time(seconds)
+    if time_tuple[0] > 0:
+        time_str += f"{time_tuple[0]}d "
+    if time_tuple[1] > 0:
+        time_str += f"{time_tuple[1]}h "
+    if time_tuple[2] > 0:
+        time_str += f"{time_tuple[2]}m "
+    if time_tuple[3] > 0:
+        time_str += f"{time_tuple[3]}s"
+    return time_str
+
+
 def load_player_head(name: str, cbk: Callable[[wx.Bitmap], None], target_size: int = 64, no_cache: bool = False):
     """
     加载玩家头像至Bitmap
@@ -163,6 +183,35 @@ def get_gradient_bitmap(color1: wx.Colour, color2: wx.Colour, size: tuple[int, i
     if not bitmap.IsOk():
         return None
     return bitmap.ConvertToBitmap()
+
+
+class NoTabNotebook(wx.Panel):
+    def __init__(self, parent: wx.Window):
+        super().__init__(parent, style = wx.TRANSPARENT_WINDOW)
+        self.panels: list[wx.Window] = []
+        self.now_window: wx.Window | None = None
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        self.SetSizer(self.sizer)
+        self.Bind(wx.EVT_ERASE_BACKGROUND, lambda event: None)
+
+    def add_page(self, window: wx.Window):
+        self.panels.append(window)
+        window.Hide()
+        if not self.now_window:
+            self.now_window = window
+            self.sizer.Add(window, 1, wx.EXPAND)
+            self.Layout()
+
+    def switch_page(self, index: int):
+        if self.now_window:
+            self.now_window.Hide()
+        self.now_window = self.panels[index]
+        self.panels[index].Show()
+        self.sizer.Clear()
+        self.sizer.Add(self.panels[index], 1, wx.EXPAND)
+        self.Layout()
+        self.Refresh()
+        self.now_window.Refresh()
 
 
 class CenteredText(wx.StaticText):
@@ -397,9 +446,10 @@ class LabeledData(wx.Panel):
     def SetData(self, data: str):
         self.data_t.SetLabel(data)
 
+
 class DataShowDialog(wx.Dialog):
     def __init__(self, parent: wx.Window, data: list[str], header: str = "数据", title: str = "数据"):
-        super().__init__(parent, style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER, size=(380, 400))
+        super().__init__(parent, style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER, size=(380, 400))
         self.SetFont(ft(11))
         self.SetTitle(title)
         self.data_lc = wx.ListCtrl(self, style=wx.LC_REPORT)
